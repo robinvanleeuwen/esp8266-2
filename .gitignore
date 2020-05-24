@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+.idea/
+cmake-build-debug/
+cmake-build-esp07/
+cmake-build-uno_wifi_rev2/
+.pio/
+data/
