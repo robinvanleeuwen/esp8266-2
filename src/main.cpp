@@ -6,6 +6,7 @@
 
 
 String ReadIniFile(String Key);
+String getDateTime(const RtcDateTime& dt);
 
 const uint8_t PIN_ESP_D2_TO_RTC_RST = 4;
 const uint8_t PIN_ESP_D4_TO_RTC_DAT = 2;
@@ -31,6 +32,23 @@ void blink(int number_of_blinks, int delay_in_ms) {
     }
 }
 
+String getDateTime(const RtcDateTime& dt)
+{
+    char datestring[20];
+
+    snprintf_P(datestring,
+               sizeof(datestring),
+               PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
+               dt.Month(),
+               dt.Day(),
+               dt.Year(),
+               dt.Hour(),
+               dt.Minute(),
+               dt.Second() );
+    return (String) datestring;
+}
+
+
 void SendToServer(String line)
 {
     Serial.println("Sending: '" + line + "' to "+server_ip+":"+server_port);
@@ -38,7 +56,9 @@ void SendToServer(String line)
     if (client.connect(server_ip.c_str(), server_port.toInt()))
     {
         size_t n = client.println(line);
-        Serial.println(String(sprintf(s, "Wrote %u to ", n)));
+        Serial.println(String(sprintf(s, "Wrote %u bytes\n", n)));
+
+
     }
 
 }
@@ -110,7 +130,7 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 
     pinMode(PIN_ESP_D2_TO_RTC_RST, OUTPUT);
-    pinMode(PIN_ESP_D4_TO_RTC_DAT, OUTPUT);
+    pinMode(PIN_ESP_D4_TO_RTC_DAT, INPUT);
     pinMode(PIN_ESP_D5_TO_RTC_CLK, INPUT);
 
     blink(10, 100);
@@ -121,10 +141,8 @@ void setup() {
 
     Serial.println(__DATE__);
     Serial.println(__TIME__);
-//    RtcDateTime compiled_datetime = (__DATE__, __TIME__);
-//    Serial.println(compiled_datetime);
+    RtcDateTime compiled_datetime = RtcDateTime(__DATE__, __TIME__);
     Rtc.Begin();
-
 
 }
 
@@ -139,6 +157,9 @@ void loop() {
     else
     {
         SendToServer("WL_CONNECTED with IP: "+IPAddressToString(WiFi.localIP()));
+        RtcDateTime read_date = Rtc.GetDateTime();
+        SendToServer((String) getDateTime(read_date));
+
         Serial.println(WiFi.localIP());
     }
     Serial.println();
