@@ -1,4 +1,5 @@
-#include <Arduino.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <ESP8266WiFi.h>
 #include <Wire.h>
 #include <ThreeWire.h>
@@ -8,11 +9,11 @@
 String ReadIniFile(String Key);
 String getDateTime(const RtcDateTime& dt);
 
-const uint8_t PIN_ESP_D2_TO_RTC_RST = 4;
-const uint8_t PIN_ESP_D4_TO_RTC_DAT = 2;
-const uint8_t PIN_ESP_D5_TO_RTC_CLK = 14;
+const uint8_t YELLOW_D2_TO_RTC_RST = 4;
+const uint8_t ORANGE_D4_TO_RTC_DAT = 2;
+const uint8_t GREEN__D5_TO_RTC_CLK = 14;
 
-ThreeWire myWire(PIN_ESP_D4_TO_RTC_DAT, PIN_ESP_D5_TO_RTC_CLK, PIN_ESP_D2_TO_RTC_RST);
+ThreeWire myWire(ORANGE_D4_TO_RTC_DAT, GREEN__D5_TO_RTC_CLK, YELLOW_D2_TO_RTC_RST);
 RtcDS1302<ThreeWire> Rtc(myWire);
 
 using namespace std;
@@ -24,10 +25,9 @@ String server_port;
 void blink(int number_of_blinks, int delay_in_ms) {
 
     for (int i=0; i< number_of_blinks; i++) {
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(delay_in_ms);
         digitalWrite(LED_BUILTIN, HIGH);
         delay(delay_in_ms);
+        digitalWrite(LED_BUILTIN, LOW);
         Serial.println("Blinked");
     }
 }
@@ -51,14 +51,9 @@ String getDateTime(const RtcDateTime& dt)
 
 void SendToServer(String line)
 {
-    Serial.println("Sending: '" + line + "' to "+server_ip+":"+server_port);
-    char *s = "";
     if (client.connect(server_ip.c_str(), server_port.toInt()))
     {
-        size_t n = client.println(line);
-        Serial.println(String(sprintf(s, "Wrote %u bytes\n", n)));
-
-
+        client.println(line);
     }
 
 }
@@ -129,12 +124,18 @@ void setup() {
     Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT);
 
-    pinMode(PIN_ESP_D2_TO_RTC_RST, OUTPUT);
-    pinMode(PIN_ESP_D4_TO_RTC_DAT, INPUT);
-    pinMode(PIN_ESP_D5_TO_RTC_CLK, INPUT);
+    pinMode(YELLOW_D2_TO_RTC_RST, OUTPUT);
+    pinMode(ORANGE_D4_TO_RTC_DAT, INPUT);
+    pinMode(GREEN__D5_TO_RTC_CLK, INPUT);
 
     blink(10, 100);
     digitalWrite(LED_BUILTIN, LOW);
+
+    digitalWrite(GREEN__D5_TO_RTC_CLK, HIGH);
+    delay(500);
+    digitalWrite(GREEN__D5_TO_RTC_CLK, LOW);
+
+
     server_ip = ReadIniFile("SERVER_IP");
     server_port = ReadIniFile("SERVER_PORT");
     connect_to_wifi();
@@ -148,22 +149,20 @@ void setup() {
 
 void loop() {
 
-    blink(1, 50);
+    blink(5, 500);
+
     if (WiFi.status() != WL_CONNECTED)
     {
         connect_to_wifi();
         digitalWrite(LED_BUILTIN, LOW);
     }
-    else
-    {
-        SendToServer("WL_CONNECTED with IP: "+IPAddressToString(WiFi.localIP()));
+    else {
+        SendToServer("WL_CONNECTED with IP: " + IPAddressToString(WiFi.localIP()));
         RtcDateTime read_date = Rtc.GetDateTime();
         SendToServer((String) getDateTime(read_date));
-
         Serial.println(WiFi.localIP());
     }
     Serial.println();
     delay(5000);
-
 }
 
